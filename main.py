@@ -7,11 +7,11 @@ from nnModel import Model
 def perceptron_test():
     #inputs = [0.2, 1.0, 1.4, 1.6, 2.0, 2.2, 2.7, 2.8, 3.2, 3.3, 3.5, 3.7, 4.0, 4.4, 5.0, 5.2]
     #targets = [230, 555, 815, 860, 1140, 1085, 1200, 1330, 1290, 870, 1545, 1480, 1750, 1845, 1790, 1955]
-    inputs = [1, 2, 3, 4]
-    targets = [2, 4, 6, 8]
+    train_inputs = [1, 2, 3, 4]
+    train_targets = [2, 4, 6, 8]
 
-    inputs = [[i] for i in inputs]
-    targets = [[i] for i in targets]
+    # train_inputs = [[i] for i in train_inputs]
+    # train_targets = [[i] for i in train_targets]
 
     layers = [
         InputLayer('Input', 0, 1),
@@ -19,7 +19,9 @@ def perceptron_test():
     ]
 
     model = Model(layers)
-    model.train(inputs, targets, epochs=20, learning_rate=0.1, print_threshold=5)
+    model.train(train_inputs, train_targets, epochs=10,
+                learning_rate=0.1, cost_fn='Mean Squared Error',
+                print_threshold=1)
     # model.print_model_architecture()
     # errors = model.get_model_error(targets)
     # print(errors, '\n')
@@ -29,8 +31,12 @@ def perceptron_test():
     # print(f"Output_layer_weight: {output_layer_weight}")
 
     # for inferencing
-    preds = model.predict(inputs)
+    test_inputs = [5, 6]
+    # test_targets = [10, 12]
+    preds = model.predict(test_inputs)
     print(preds, '\n')
+    print('\nIf the results of predicting the unseen inputs are good,')
+    print('maybe we should save the current weights of the Network.')
 
 
 if __name__ == '__main__':

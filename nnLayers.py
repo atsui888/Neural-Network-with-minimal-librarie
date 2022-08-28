@@ -52,13 +52,12 @@ class InputLayer(Layer):
         self._data = None
 
     def set_data(self, data):
+        data = DataHelper.list_to_listoflists(data)
+
         if DataHelper.is_list_of_lists(data):
             self._data = data
-        self._layer_matrix = np.array(data).reshape(-1, self._nodes)  # representation of this layer
 
-    def data_wrangling_fns(self):
-        # placeholder - otherwise, no reason to have a child class just for input
-        pass
+        self._layer_matrix = np.array(data).reshape(-1, self._nodes)  # representation of this layer
 
 
 class FullyConnectedLayer(Layer):
@@ -92,8 +91,9 @@ class FullyConnectedLayer(Layer):
     def get_weights_matrix(self):
         return self._weights_matrix
 
-    def update_weights_matrix(self, learning_rate, deltas):
-        self._weights_matrix += learning_rate * deltas
+    def update_weights_matrix(self, learning_rate, weight_deltas):
+        # once delta is 0, +=0 means no change in weights
+        self._weights_matrix -= learning_rate * weight_deltas
 
     def forward(self, x):
         """

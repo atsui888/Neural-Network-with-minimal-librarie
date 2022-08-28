@@ -32,8 +32,8 @@ class Model:
         self._errors = None
         self._len_targets = None
         self._cost = None
-        self._error_derivative = None
-        self._weight_delta = None
+        self._error_derivatives = None
+        self._weight_deltas = None
 
     def print_model_architecture(self):
         for idx, layer in enumerate(self._layers):
@@ -57,8 +57,8 @@ class Model:
         else:
             return True
 
-    def train(self, data, targets, epochs=1, learning_rate=0.001, threshold=0.5,
-              print_threshold=10):
+    def train(self, data, targets, epochs=1, learning_rate=0.001, cost_fn='Mean Squared Error',
+              threshold=0.5, print_threshold=10):
         """
         X: train data
         y: targets
@@ -96,15 +96,23 @@ class Model:
                     else:
                         self._preds = layer.predict(threshold=threshold)
 
-                    errors = self.get_model_error(targets)
-                    cost = self.get_model_cost(cost_fn='Mean Absolute Error')
-                    output_layer_weights = layer.get_weights_matrix()
+                    _ = self.get_model_error(targets)
 
+                    cost = self.get_model_cost(cost_fn=cost_fn)
                     if epoch % print_threshold == 0 or epoch == epochs-1:
-                        print(f"epoch #{epoch+1}: \t\tWeight: {output_layer_weights} \tCost: {cost:,.02f}")
+                        print(f"epoch #{epoch+1}: \t\tWeight: {layer.get_weights_matrix()} \tCost: {cost:,.02f}")
 
+                    # get_model_error() already done above
+                    # Get Weight_Derivatives
+                    self.calc_weight_deltas(self._layers[0].get_layer_matrix())
+
+                    # todo: for perceptron this works, but what if there is >=1 hidden layer?
+                    # todo: keep this or change?
                     # todo: back prop - update weights (is this the best place to do this?
-                    layer.update_weights_matrix(learning_rate, cost)
+                    # updating the weights in the network is called `back propagation`
+                    # `back propagation` takes the desired weight changes and propagates it back to
+                    # the start of the network by adjusting the weights
+                    layer.update_weights_matrix(learning_rate, self._weight_deltas)
 
                 self._probs = layer.get_layer_matrix()
 
@@ -152,6 +160,10 @@ class Model:
     def get_model_error(self, targets):
         # model's difference between predictions and targets
 
+        # code below expects targets to be a list of lists
+        # or tuple of lists (this one need to check)
+        targets = DataHelper.list_to_listoflists(targets)
+
         if DataHelper.is_list_of_lists(targets):
             # print('list of lists targets ok')
             self._len_targets = len(targets)
@@ -161,14 +173,20 @@ class Model:
             # targets and inputs are given, we can only adjust the weights to reduce the error
             if self._preds is None:
                 raise ValueError('Preds cannot be None.')
+
             self._errors = self._preds - targets  # a matrix
+
             return self._errors
 
     def get_model_cost(self, cost_fn='Mean Squared Error'):
+        # Cost - a metric to show how far off we are from the target
+        #      aka Average Error
+        # usually not used in back prop
         # sum(errors) / len(targets) to obtain a single scalar
         # there are many types of cost fns e.g.
-        # For regression: "Mean Absolute Error", "Mean Squared Error"
-        # For classification: "Binary Cross Entrophy", "Categorical Cross Entrophy"
+
+        # For regression <-- "Mean Absolute Error", "Mean Squared Error"
+        # For classification <-- "Binary Cross Entropy", "Categorical Cross Entropy"
         if self._errors is None:
             raise ValueError('model errors is None. \nYou must call model.get_model_error(targets) first.')
 
@@ -178,16 +196,32 @@ class Model:
             self._cost = np.sum(np.abs(self._errors)) / self._len_targets
         return self._cost
 
-    def get_weight_delta(self):
-        self._error_derivative = 2 * self._errors
+    def calc_weight_deltas(self, input_data):
+        if self._errors is None:
+            raise ValueError('To calculate error derivative, Errors cannot be None ')
+        # first, find the error derivatives
+        self._error_derivatives = 2 * self._errors
+        # next, get weight deltas
+        # todo: is weight_date, err_d * input_data
+        # todo: OR
+        # todo: is weight_date, err_d * input_from_prev_layer
+        # weight_derivative is the change that each training sample wants to make to the weight
+        # print(f"self._error_derivatives.shape: {self._error_derivatives.shape}")
+        # input_data = input_data.reshape(self._error_derivatives.shape[1], -1)
+        # print(f"input_data.shape: {input_data.shape}")
 
-        # self._weight_delta = self._error_derivative * Inputs
-        # rc: inputs is the input layer or the preceding layer ?
-
-        return self._weight_delta
+        # self._weight_deltas = np.dot(self._error_derivatives, input_data)
+        # shd be element multiply, not do product
+        # https://numpy.org/doc/stable/reference/generated/numpy.multiply.html
+        self._weight_deltas = np.sum(
+            np.multiply(self._error_derivatives, input_data),
+            axis=0) / input_data.shape[0]
+        # print(f"self._weight_deltas: \n{self._weight_deltas}")
 
     def update_weights(self):
         # weights -= learning_rate * np.sum(self._weight_delta) / len(self._weight_delta)
+        # currently not used
+        # currently the output layer updates it's own weights.
         pass
 
     def save_model_architecture(self):
