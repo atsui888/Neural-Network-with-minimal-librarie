@@ -34,6 +34,7 @@ class Model:
         self._cost = None
         self._error_derivatives = None
         self._weight_deltas = None
+        self._bias_deltas = None
 
     def print_model_architecture(self):
         for idx, layer in enumerate(self._layers):
@@ -104,7 +105,15 @@ class Model:
 
                     # get_model_error() already done above
                     # Get Weight_Derivatives
-                    self.calc_weight_deltas(self._layers[0].get_layer_matrix())
+                    # .calc_weight_deltas() is part of model class but the param
+                    # is the layer's matrix. Thus, .calc_weight_deltas() is actually
+                    # using the layer's data/matrix to run calculations and then
+                    # calling the layer's `update weights` method so that the layer
+                    # updates its own weights. Similar concept for bias.
+                    self.calc_weight_bias_deltas(
+                        self._layers[idx-1].get_layer_matrix(),
+                        self._layers[idx].get_bias_matrix()
+                    )
 
                     # todo: for perceptron this works, but what if there is >=1 hidden layer?
                     # todo: keep this or change?
@@ -112,7 +121,7 @@ class Model:
                     # updating the weights in the network is called `back propagation`
                     # `back propagation` takes the desired weight changes and propagates it back to
                     # the start of the network by adjusting the weights
-                    layer.update_weights_matrix(learning_rate, self._weight_deltas)
+                    layer.update_weights_bias(learning_rate, self._weight_deltas, self._bias_deltas)
 
                 self._probs = layer.get_layer_matrix()
 
@@ -196,7 +205,7 @@ class Model:
             self._cost = np.sum(np.abs(self._errors)) / self._len_targets
         return self._cost
 
-    def calc_weight_deltas(self, input_data):
+    def calc_weight_bias_deltas(self, layer_matrix, bias_matrix):
         if self._errors is None:
             raise ValueError('To calculate error derivative, Errors cannot be None ')
         # first, find the error derivatives
@@ -206,23 +215,17 @@ class Model:
         # todo: OR
         # todo: is weight_date, err_d * input_from_prev_layer
         # weight_derivative is the change that each training sample wants to make to the weight
-        # print(f"self._error_derivatives.shape: {self._error_derivatives.shape}")
-        # input_data = input_data.reshape(self._error_derivatives.shape[1], -1)
-        # print(f"input_data.shape: {input_data.shape}")
 
-        # self._weight_deltas = np.dot(self._error_derivatives, input_data)
         # shd be element multiply, not do product
         # https://numpy.org/doc/stable/reference/generated/numpy.multiply.html
         self._weight_deltas = np.sum(
-            np.multiply(self._error_derivatives, input_data),
-            axis=0) / input_data.shape[0]
-        # print(f"self._weight_deltas: \n{self._weight_deltas}")
+            np.multiply(self._error_derivatives, layer_matrix),
+            axis=0) / layer_matrix.shape[0]
+        self._bias_deltas = np.sum(
+            np.multiply(self._error_derivatives, bias_matrix),
+            axis=0) / bias_matrix.shape[0]
 
-    def update_weights(self):
-        # weights -= learning_rate * np.sum(self._weight_delta) / len(self._weight_delta)
-        # currently not used
-        # currently the output layer updates it's own weights.
-        pass
+        # print(f"self._weight_deltas: \n{self._weight_deltas}")
 
     def save_model_architecture(self):
         pass

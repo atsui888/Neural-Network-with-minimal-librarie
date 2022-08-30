@@ -71,6 +71,11 @@ class FullyConnectedLayer(Layer):
         # self._weights_matrix = np.random.rand(self._nodes_prev_layer * self._nodes)
         self._weights_matrix = self._weights_matrix.reshape(self._nodes_prev_layer, self._nodes)
 
+        # Todo: use randomised bias after I have finished testing
+        #  multiply by 1, because there is only 1 bias node in a layer
+        self._bias_matrix = np.full(self._nodes_prev_layer * 1, fill_value=0.3)
+        #self._bias_matrix = self._bias_matrix.reshape(self._nodes_prev_layer, -1)
+
         self._layer_matrix = np.zeros(self._nodes).reshape(1, self._nodes)  # representation of this layer
 
         self.act_fn = act_fn
@@ -91,9 +96,13 @@ class FullyConnectedLayer(Layer):
     def get_weights_matrix(self):
         return self._weights_matrix
 
-    def update_weights_matrix(self, learning_rate, weight_deltas):
+    def get_bias_matrix(self):
+        return self._bias_matrix
+
+    def update_weights_bias(self, learning_rate, weight_deltas, bias_deltas):
         # once delta is 0, +=0 means no change in weights
         self._weights_matrix -= learning_rate * weight_deltas
+        self._bias_matrix -= learning_rate * bias_deltas
 
     def forward(self, x):
         """
@@ -167,5 +176,8 @@ class OutputRegression(FullyConnectedLayer):
         the result of the forward pass.
         :return:
         """
-        return self._layer_matrix
+        # return self._layer_matrix + self._bias_matrix
+        # print(f"\nbias matrix \n{self.get_bias_matrix()}")
+        # print(f"layer matrix: \n{self.get_layer_matrix()}\n")
+        return self._layer_matrix + self.get_bias_matrix()
 

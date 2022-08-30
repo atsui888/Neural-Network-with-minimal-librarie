@@ -19,8 +19,8 @@ def perceptron_test():
     ]
 
     model = Model(layers)
-    model.train(train_inputs, train_targets, epochs=10,
-                learning_rate=0.1, cost_fn='Mean Squared Error',
+    model.train(train_inputs, train_targets, epochs=50,
+                learning_rate=0.075, cost_fn='Mean Squared Error',
                 print_threshold=1)
     # model.print_model_architecture()
     # errors = model.get_model_error(targets)
@@ -34,7 +34,7 @@ def perceptron_test():
     test_inputs = [5, 6]
     # test_targets = [10, 12]
     preds = model.predict(test_inputs)
-    print(preds, '\n')
+    print(f"prediction on unseen test data: {preds}" )
     print('\nIf the results of predicting the unseen inputs are good,')
     print('maybe we should save the current weights of the Network.')
 
