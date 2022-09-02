@@ -36,6 +36,11 @@ class Model:
         self._weight_deltas = None
         self._bias_deltas = None
 
+        # init bias
+        for idx, layer in enumerate(self._layers):
+            if layer.layer_type.lower() != 'input layer':
+                layer.init_bias_matrix((self._layers[idx-1]).get_layer_matrix_shape()[0], debug_mode=True)
+
     def print_model_architecture(self):
         for idx, layer in enumerate(self._layers):
             print(f"\nLayer #{idx}:")
@@ -59,7 +64,7 @@ class Model:
             return True
 
     def train(self, targets, epochs=1, learning_rate=0.001, cost_fn='Mean Squared Error',
-              threshold=0.5, print_threshold=10):
+              threshold=0.5, print_threshold=10, debug_mode=False):
         """
         X: train data
         y: targets
@@ -134,7 +139,7 @@ class Model:
 
     def predict(self, data, threshold=0.5):
         """
-        This fn is used for inferencing, NOT for training
+        THIS FUNCTION IS USED FOR "INFERENCING", not for training
 
         for training, the train loop will call layer.predict(), not this one (which is model.predict())
 
@@ -148,7 +153,7 @@ class Model:
         for idx, layer in enumerate(self._layers):
             # print(f"\nlayer.layer_type: {layer.layer_type}")
             if layer.layer_type.lower() == 'input layer':
-                layer.set_data(data)
+                layer.set_data(data)  # todo: set_data shd not be call each loop?
                 continue
             else:
                 # Forward Once

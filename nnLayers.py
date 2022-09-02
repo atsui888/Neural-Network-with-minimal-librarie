@@ -5,11 +5,13 @@ from nnData_Helper import DataHelper
 class Layer:
     layer_type = 'Base Layer'
 
-    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer):
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, debug_mode=False):
         self.layer_name = layer_name
         self._nodes_prev_layer = nodes_prev_layer
         self._nodes = nodes_in_layer
         self._layer_matrix = None
+
+        self._debug_mode = debug_mode
 
     def get_layer_details(self):
         layer_details = {
@@ -40,6 +42,9 @@ class Layer:
     def get_layer_matrix(self):
         return self._layer_matrix
 
+    def get_layer_matrix_shape(self):
+        return self._layer_matrix.shape
+
 
 class InputLayer(Layer):
     """
@@ -47,16 +52,24 @@ class InputLayer(Layer):
     """
     layer_type = 'Input Layer'
 
-    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, train_data):
-        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer)
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, train_data, debug_mode=False):
+        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, debug_mode)
         self._data = None
         self.set_data(train_data)
 
     def set_data(self, data):
         self._data = data
-        # print(f"inside set_data(), self._nodes = {self._nodes}")
-        # input('sss')
         self._layer_matrix = np.array(data).reshape(-1, self._nodes)
+        if self._layer_matrix.ndim == 1:
+            self._layer_matrix = self._layer_matrix.reshape(-1, 1)
+
+        if self._debug_mode:
+            print('\nInput Layer <-- set_data(self, data):')
+            print(f"Number of Feature nodes in Input Layer:\t{self._nodes}")
+            # if error, input data must be converted to numpy array first
+            print(f"Incoming Training Data shape is:\t\t{data.shape}")
+            print(f"Input Layer Matrix share is:\t\t\t{self._layer_matrix.shape}")
+
         # data = DataHelper.list_to_listoflists(data)
 
         # if DataHelper.is_list_of_lists(data):
@@ -65,28 +78,39 @@ class InputLayer(Layer):
         #     self._layer_matrix = np.array(data).reshape(-1, self._nodes)
 
 
-
 class FullyConnectedLayer(Layer):
     layer_type = 'Fully Connected Layer'
 
-    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn):
-        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer)
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode=False):
+        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, debug_mode)
 
         # todo: comment out the next line when testing is over, initial weights are fixed
         self._weights_matrix = np.full(self._nodes_prev_layer * self._nodes, fill_value=0.1)
         # Todo: Uncomment next line when testing is over, coz we don't want the weights with a fixed initial value
         # self._weights_matrix = np.random.rand(self._nodes_prev_layer * self._nodes)
         self._weights_matrix = self._weights_matrix.reshape(self._nodes_prev_layer, self._nodes)
+        if self._weights_matrix.ndim == 1:
+            self._weights_matrix = self._weights_matrix.reshape(-1, 1)
 
-        # Todo: use randomised bias after I have finished testing
-        #  multiply by 1, because there is only 1 bias node in a layer
-        self._bias_matrix = np.full(self._nodes_prev_layer * 1, fill_value=0.3)
-        # self._bias_matrix = np.random.rand(self._nodes_prev_layer * 1)
-        # self._bias_matrix = self._bias_matrix.reshape(self._nodes_prev_layer, -1)
+        self._bias_matrix = None
 
         self._layer_matrix = np.zeros(self._nodes).reshape(1, self._nodes)  # representation of this layer
 
         self.act_fn = act_fn
+
+    def init_bias_matrix(self, num_rows_of_incoming_matrix, debug_mode=False):
+        # Todo: use randomised bias after I have finished testing
+        #  multiply by 1, because there is only 1 bias node in a layer per input row
+        self._bias_matrix = np.full((num_rows_of_incoming_matrix, 1), fill_value=0.3)
+        # self._bias_matrix = np.random.rand(num_rows_of_incoming_matrix * 1)
+        # self._bias_matrix = self._bias_matrix.reshape(-1, 1)
+        if self._bias_matrix.ndim == 1:
+            self._bias_matrix = self._bias_matrix.reshape(-1, 1)
+
+        if debug_mode:
+            print(f"Layer Name: {self.layer_name}")
+            print(f"bias matrix")
+            print(f"shape of bias matrix: {self._bias_matrix.shape}")
 
     def get_layer_details(self):
         layer_details = super().get_layer_details()
@@ -149,12 +173,43 @@ class FullyConnectedLayer(Layer):
         self.act_fn.execute(888)
 
 
+class OutputRegression(FullyConnectedLayer):
+    layer_type = 'Output_Regression'
+    # nodes_in_layer = 1  # hardcode coz regression, the pred is a scaler, hence only one node
+
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode=False):
+        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode)
+        self._prediction = 0.0
+
+        if self._debug_mode:
+            print('\nOutput Regression Layer <-- __init__ :')
+            print(f"self._weights.shape: {self._weights_matrix.shape}")
+            print(f"self._layer_matrix.shape: {self._layer_matrix.shape:}")
+
+    def predict(self):
+        """
+        regression prediction is linear(wx + b), and this is ALREADY done in the forward
+        pass.
+        Hence, to 'predict', all we need to do here is to return the layer_matrix that was
+        the result of the forward pass.
+        :return:
+        """
+        # return self._layer_matrix + self._bias_matrix
+        # print(f"\nbias matrix \n{self.get_bias_matrix()}")
+        # print(f"layer matrix: \n{self.get_layer_matrix()}\n")
+        # print(f"self nodes --> {self._nodes}")
+        # print(self._layer_matrix.shape)
+        # temp = self._layer_matrix  # + self.get_bias_matrix()
+        # print(f"temp.shape --> {temp.shape}")
+        return self._layer_matrix + self.get_bias_matrix()
+
+
 class OutputBinaryClassification(FullyConnectedLayer):
     layer_type = 'Output_Binary_Classification'
 
     def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn):
-        nodes_in_layer = 1  # hardcode coz binary classification
-
+        # hardcode coz binary classification
+        nodes_in_layer = 1
         super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn)
 
         self._predicted_class = None
@@ -179,29 +234,4 @@ class OutputBinaryClassification(FullyConnectedLayer):
 # class Output_MultiLabel_Classification(Fully_Connected_Layer): # predict p-values of 1 or more classes
 #   an input can belong to >1 class
 
-class OutputRegression(FullyConnectedLayer):
-    layer_type = 'Output_Regression'
-    # nodes_in_layer = 1  # hardcode coz regression, the pred is a scaler, hence only one node
-
-    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn):
-        self._prediction = 0.0
-
-        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn)
-
-    def predict(self):
-        """
-        regression prediction is linear(wx + b), and this is ALREADY done in the forward
-        pass.
-        Hence, to 'predict', all we need to do here is to return the layer_matrix that was
-        the result of the forward pass.
-        :return:
-        """
-        # return self._layer_matrix + self._bias_matrix
-        # print(f"\nbias matrix \n{self.get_bias_matrix()}")
-        # print(f"layer matrix: \n{self.get_layer_matrix()}\n")
-        #print(f"self nodes --> {self._nodes}")
-        # print(self._layer_matrix.shape)
-        #temp = self._layer_matrix  # + self.get_bias_matrix()
-        # print(f"temp.shape --> {temp.shape}")
-        return self._layer_matrix + self.get_bias_matrix()
 

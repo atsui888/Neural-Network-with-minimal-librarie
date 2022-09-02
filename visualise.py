@@ -9,3 +9,5 @@ def scatter_plot(x, y):
 def line_plot(x, y):
     plt.plot(x, y)
     plt.show()
+
+
