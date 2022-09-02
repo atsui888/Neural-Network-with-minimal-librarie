@@ -1,5 +1,5 @@
 import numpy as np
-from nnData_Helper import DataHelper
+# from nnData_Helper import DataHelper
 
 
 class Model:
@@ -58,7 +58,7 @@ class Model:
         else:
             return True
 
-    def train(self, data, targets, epochs=1, learning_rate=0.001, cost_fn='Mean Squared Error',
+    def train(self, targets, epochs=1, learning_rate=0.001, cost_fn='Mean Squared Error',
               threshold=0.5, print_threshold=10):
         """
         X: train data
@@ -77,19 +77,21 @@ class Model:
             back prop (update weights)
 
         """
+        epoch_lst = []
+        cost_lst = []
+
         for epoch in range(epochs):
             # print(f"epoch #: {epoch + 1}")
             for idx, layer in enumerate(self._layers):
                 layer_details = layer.get_layer_details()
                 if layer.layer_type.lower() == 'input layer':
-                    layer.set_data(data)
+                    # print(f"Input Layer shape --> {layer.get_layer_matrix().shape}")
                     continue
                 else:
+                    # print(f"NON-input Layer shape --> {layer.get_layer_matrix().shape}")
                     layer.forward(self._layers[idx - 1].get_layer_matrix())
 
-                # Need to predict, otherwise won't know the error and cannot perform back prop
-                # layers (except for input) only does dot pdt in the forward pass, so we need to
-                # drive the prediction, calc error, find derivatives, update weights from here.
+                # PREDICT
                 if layer_details['name'].lower() == 'output':
                     if layer.layer_type.lower() == 'output_regression':
                         # need to pass the prev layer matrix
@@ -100,8 +102,12 @@ class Model:
                     _ = self.get_model_error(targets)
 
                     cost = self.get_model_cost(cost_fn=cost_fn)
+
+                    epoch_lst.append(epoch)
+                    cost_lst.append(cost)
+
                     if epoch % print_threshold == 0 or epoch == epochs-1:
-                        print(f"epoch #{epoch+1}: \t\tWeight: {layer.get_weights_matrix()} \tCost: {cost:,.02f}")
+                        print(f"epoch #{epoch+1}: \tW.shape: {layer.get_weights_matrix().shape},\tB.shape: {layer.get_bias_matrix().shape}, \tCost: {cost:,.02f}")
 
                     # get_model_error() already done above
                     # Get Weight_Derivatives
@@ -124,13 +130,13 @@ class Model:
                     layer.update_weights_bias(learning_rate, self._weight_deltas, self._bias_deltas)
 
                 self._probs = layer.get_layer_matrix()
+        return epoch_lst, cost_lst
 
     def predict(self, data, threshold=0.5):
         """
         This fn is used for inferencing, NOT for training
 
-        For the purpose of backprop, the model.forward() already does a .predict() there
-        so that we can calc the errors, which is used for back prop.
+        for training, the train loop will call layer.predict(), not this one (which is model.predict())
 
         :param data:
         :param threshold:
@@ -171,21 +177,23 @@ class Model:
 
         # code below expects targets to be a list of lists
         # or tuple of lists (this one need to check)
-        targets = DataHelper.list_to_listoflists(targets)
+        # targets = DataHelper.list_to_listoflists(targets)
 
-        if DataHelper.is_list_of_lists(targets):
-            # print('list of lists targets ok')
-            self._len_targets = len(targets)
-            # errors = preds - targets
-            # preds = weights * input
-            # so, errors = (weights * input) - targets #
-            # targets and inputs are given, we can only adjust the weights to reduce the error
-            if self._preds is None:
-                raise ValueError('Preds cannot be None.')
+        # if DataHelper.is_list_of_lists(targets):
+        # print('list of lists targets ok')
+        self._len_targets = len(targets)
+        # errors = preds - targets
+        # preds = weights * input
+        # so, errors = (weights * input) - targets #
+        # targets and inputs are given, we can only adjust the weights to reduce the error
+        if self._preds is None:
+            raise ValueError('Preds cannot be None.')
 
-            self._errors = self._preds - targets  # a matrix
+        # print(f"self._preds shape: {self._preds.shape}")
+        # print(f"targets shape: {targets.shape}")
+        self._errors = self._preds - targets  # a matrix
 
-            return self._errors
+        return self._errors
 
     def get_model_cost(self, cost_fn='Mean Squared Error'):
         # Cost - a metric to show how far off we are from the target

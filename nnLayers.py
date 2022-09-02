@@ -43,21 +43,27 @@ class Layer:
 
 class InputLayer(Layer):
     """
-    Input layer has no weights.
+    Input layer has no weights nor bias.
     """
     layer_type = 'Input Layer'
 
-    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer):
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, train_data):
         super().__init__(layer_name, nodes_prev_layer, nodes_in_layer)
         self._data = None
+        self.set_data(train_data)
 
     def set_data(self, data):
-        data = DataHelper.list_to_listoflists(data)
+        self._data = data
+        # print(f"inside set_data(), self._nodes = {self._nodes}")
+        # input('sss')
+        self._layer_matrix = np.array(data).reshape(-1, self._nodes)
+        # data = DataHelper.list_to_listoflists(data)
 
-        if DataHelper.is_list_of_lists(data):
-            self._data = data
+        # if DataHelper.is_list_of_lists(data):
+        #     self._data = data
+        #     # num samples by num features (aka self._nodes)
+        #     self._layer_matrix = np.array(data).reshape(-1, self._nodes)
 
-        self._layer_matrix = np.array(data).reshape(-1, self._nodes)  # representation of this layer
 
 
 class FullyConnectedLayer(Layer):
@@ -66,15 +72,17 @@ class FullyConnectedLayer(Layer):
     def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn):
         super().__init__(layer_name, nodes_prev_layer, nodes_in_layer)
 
+        # todo: comment out the next line when testing is over, initial weights are fixed
         self._weights_matrix = np.full(self._nodes_prev_layer * self._nodes, fill_value=0.1)
-        # Todo: Uncomment next line when testing is over, coz we don't want the weights with a fixed number
+        # Todo: Uncomment next line when testing is over, coz we don't want the weights with a fixed initial value
         # self._weights_matrix = np.random.rand(self._nodes_prev_layer * self._nodes)
         self._weights_matrix = self._weights_matrix.reshape(self._nodes_prev_layer, self._nodes)
 
         # Todo: use randomised bias after I have finished testing
         #  multiply by 1, because there is only 1 bias node in a layer
         self._bias_matrix = np.full(self._nodes_prev_layer * 1, fill_value=0.3)
-        #self._bias_matrix = self._bias_matrix.reshape(self._nodes_prev_layer, -1)
+        # self._bias_matrix = np.random.rand(self._nodes_prev_layer * 1)
+        # self._bias_matrix = self._bias_matrix.reshape(self._nodes_prev_layer, -1)
 
         self._layer_matrix = np.zeros(self._nodes).reshape(1, self._nodes)  # representation of this layer
 
@@ -101,6 +109,13 @@ class FullyConnectedLayer(Layer):
 
     def update_weights_bias(self, learning_rate, weight_deltas, bias_deltas):
         # once delta is 0, +=0 means no change in weights
+
+        if weight_deltas.ndim == 1:
+            weight_deltas = weight_deltas.reshape(-1, 1)
+
+        # print(f"self._weights_matrix.shape: {self._weights_matrix.shape}")
+        # print(f"weight_deltas.shape: {weight_deltas.shape}")
+
         self._weights_matrix -= learning_rate * weight_deltas
         self._bias_matrix -= learning_rate * bias_deltas
 
@@ -113,11 +128,16 @@ class FullyConnectedLayer(Layer):
         :return:
         """
         if x.ndim == 1:
-            x = x.reshape(1, -1)
+            x = x.reshape(-1, 1)
 
         # .sum( axis=0) collapses the rows into 1 row
         # self._layer_matrix = np.sum(np.dot(X, self._weights_matrix), axis=0)
+        # print(f"\nx.shape: {x.shape}")
+        # print(f"self._weights_matrix.shape: {self._weights_matrix.shape}")
         self._layer_matrix = np.dot(x, self._weights_matrix)
+        # print(type(self._layer_matrix))
+        # print(f"self._layer_matrix.shape: {self._layer_matrix.shape}")
+        # input('stop')
 
         # run result through the activation function
         self._layer_matrix = self.act_fn.execute(self._layer_matrix)
@@ -161,9 +181,9 @@ class OutputBinaryClassification(FullyConnectedLayer):
 
 class OutputRegression(FullyConnectedLayer):
     layer_type = 'Output_Regression'
+    # nodes_in_layer = 1  # hardcode coz regression, the pred is a scaler, hence only one node
 
     def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn):
-        nodes_in_layer = 1  # hardcode coz regression, the pred is a scaler, hence only one node
         self._prediction = 0.0
 
         super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn)
@@ -179,5 +199,9 @@ class OutputRegression(FullyConnectedLayer):
         # return self._layer_matrix + self._bias_matrix
         # print(f"\nbias matrix \n{self.get_bias_matrix()}")
         # print(f"layer matrix: \n{self.get_layer_matrix()}\n")
+        #print(f"self nodes --> {self._nodes}")
+        # print(self._layer_matrix.shape)
+        #temp = self._layer_matrix  # + self.get_bias_matrix()
+        # print(f"temp.shape --> {temp.shape}")
         return self._layer_matrix + self.get_bias_matrix()
 
