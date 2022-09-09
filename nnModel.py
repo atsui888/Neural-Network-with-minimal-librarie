@@ -36,11 +36,6 @@ class Model:
         self._weight_deltas = None
         self._bias_deltas = None
 
-        # init bias
-        for idx, layer in enumerate(self._layers):
-            if layer.layer_type.lower() != 'input layer':
-                layer.init_bias_matrix((self._layers[idx-1]).get_layer_matrix_shape()[0], debug_mode=True)
-
     def print_model_architecture(self):
         for idx, layer in enumerate(self._layers):
             print(f"\nLayer #{idx}:")
@@ -93,8 +88,9 @@ class Model:
                     # print(f"Input Layer shape --> {layer.get_layer_matrix().shape}")
                     continue
                 else:
-                    # print(f"NON-input Layer shape --> {layer.get_layer_matrix().shape}")
-                    layer.forward(self._layers[idx - 1].get_layer_matrix())
+                    layer.forward(self._layers[idx - 1].get_layer_output(),
+                                  self._layers[idx - 1].get_layer_output_bias(),
+                                  debug_mode=debug_mode)
 
                 # PREDICT
                 if layer_details['name'].lower() == 'output':
@@ -122,8 +118,8 @@ class Model:
                     # calling the layer's `update weights` method so that the layer
                     # updates its own weights. Similar concept for bias.
                     self.calc_weight_bias_deltas(
-                        self._layers[idx-1].get_layer_matrix(),
-                        self._layers[idx].get_bias_matrix()
+                        self._layers[idx-1].get_layer_output(),
+                        self._layers[idx].get_layer_output_bias()
                     )
 
                     # todo: for perceptron this works, but what if there is >=1 hidden layer?
@@ -134,45 +130,48 @@ class Model:
                     # the start of the network by adjusting the weights
                     layer.update_weights_bias(learning_rate, self._weight_deltas, self._bias_deltas)
 
-                self._probs = layer.get_layer_matrix()
+                self._probs = layer.get_layer_output()
         return epoch_lst, cost_lst
 
-    def predict(self, data, threshold=0.5):
+    def predict(self, input_data, threshold=0.5, debug_mode=False):
         """
         THIS FUNCTION IS USED FOR "INFERENCING", not for training
+        only accepts a row vector or a list of row vectors as input where
+        each row is a data sample of n number of features where n>=1
+        and data is a numpy array.
 
-        for training, the train loop will call layer.predict(), not this one (which is model.predict())
-
-        :param data:
+        :param input_data:
         :param threshold:
+        :param debug_mode:
         :return:
         """
-        # Forward Pass ONCE and does a prediction
-        preds = None
 
+        # input data
+        if input_data.ndim == 1:
+            input_data = input_data.reshape(-1, 1)
+
+        # load model network, weights and bias
+
+        # predict
         for idx, layer in enumerate(self._layers):
-            # print(f"\nlayer.layer_type: {layer.layer_type}")
+            layer_details = layer.get_layer_details()
             if layer.layer_type.lower() == 'input layer':
-                layer.set_data(data)  # todo: set_data shd not be call each loop?
+                layer.set_data_and_bias(input_data)
                 continue
             else:
-                # Forward Once
-                layer.forward(self._layers[idx - 1].get_layer_matrix())
+                layer.forward(self._layers[idx - 1].get_layer_output(),
+                              self._layers[idx - 1].get_layer_output_bias(),
+                              debug_mode=debug_mode)
 
-                # print(f"after forward pass:\n{layer.get_layer_matrix()}")
-
-            if layer.layer_name.lower() == 'output':
+            # PREDICT
+            if layer_details['name'].lower() == 'output':
                 if layer.layer_type.lower() == 'output_regression':
-                    print('\nPrediction: Regression')
                     self._preds = layer.predict()
-                    preds = [f"{p[0]:,.02f}" for p in self._preds]
                 else:
-                    print('classification')
                     self._preds = layer.predict(threshold=threshold)
-                    preds = 'do something here'
 
-                self._probs = layer.get_layer_matrix()
-                return preds
+            self._probs = layer.get_layer_output()
+        return self._preds, self._probs
 
     def get_proba(self):
         return self._probs

@@ -59,23 +59,23 @@ def perceptron_test_input_one_feature_type_a():
 
     layers = [
         InputLayer('Input', 0, 1, train_inputs, debug_mode=DEBUG),
-        OutputRegression('Output', 1, 1, Linear())
+        OutputRegression('Output', 1, 1, Linear(), debug_mode=DEBUG)
     ]
 
     model = Model(layers)
-    epochs, cost = model.train(train_targets, epochs=1,  # 10000
-                               learning_rate=0.0000755,  # 0.000075 / 25,818
+    epochs, cost = model.train(train_targets, epochs=1000,  # 10000
+                               learning_rate=0.00125,  # before reno, these were the values: 0.000075 / 25,818
                                cost_fn='Mean Squared Error',
-                               print_threshold=1, debug_mode=DEBUG)
-    line_plot(epochs, cost)
+                               print_threshold=10000, debug_mode=DEBUG)
+    # line_plot(epochs, cost)
 
     # for inferencing
-    test_inputs = [1.4, 2.7, 5.0]
+    test_inputs = np.array([1.4, 2.7, 5.0])
     test_targets = [815, 1200, 1790]
-    preds = model.predict(test_inputs)
+    preds, probs = model.predict(test_inputs, debug_mode=False)
     print(f"test input: {test_inputs}")
     print(f"expected prediction: {test_targets}")
-    print(f"prediction results: {preds}" )
+    print(f"prediction results:\n{preds}" )
     print('\nIf the results of predicting the unseen inputs are good,')
     print('maybe we should save the current weights of the Network.')
 
@@ -110,23 +110,23 @@ def perceptron_test_input_one_feature_type_b():
 
     layers = [
         InputLayer('Input', 0, 1, train_inputs, debug_mode=DEBUG),
-        OutputRegression('Output', 1, 1, Linear())
+        OutputRegression('Output', 1, 1, Linear(), debug_mode=DEBUG)
     ]
 
     model = Model(layers)
-    epochs, cost = model.train(train_targets, epochs=1,
-                               learning_rate=0.00001,
+    epochs, cost = model.train(train_targets, epochs=150,
+                               learning_rate=0.095,  # if we use lr of 0.1, cost becomes negative
                                cost_fn='Mean Squared Error',
-                               print_threshold=1, debug_mode=DEBUG)
+                               print_threshold=10000, debug_mode=DEBUG)
     # line_plot(epochs, cost)
 
     # for inferencing
-    test_inputs = [4.4, 5.0]
+    test_inputs = np.array([4.4, 5.0])
     test_targets = [1.845, 1.790]
-    preds = model.predict(test_inputs)
+    preds, probs = model.predict(test_inputs, debug_mode=DEBUG)
     print(f"test input: {test_inputs}")
     print(f"expected prediction: {test_targets}")
-    print(f"prediction results: {preds}" )
+    print(f"prediction results:\n{preds}" )
     print('\nIf the results of predicting the unseen inputs are good,')
     print('maybe we should save the current weights of the Network.')
 
@@ -163,34 +163,32 @@ def perceptron_test_input_two_features():
 
     model = Model(layers)
     epochs, cost = model.train(train_targets, epochs=100,  # 100
-                               learning_rate=0.01,
+                               learning_rate=0.02,
                                cost_fn='Mean Squared Error',
                                print_threshold=10, debug_mode=DEBUG)
     # line_plot(epochs, cost)
 
     # for inferencing
+    print("\n", "*"*50)
+    print("Inferencing:")
     test_inputs = np.array([(4, 4), (3, 3)])
-    if test_inputs.ndim == 1:
-        test_inputs = test_inputs.reshape(-1, 1)
     print(f"\nTest Inputs shape: {test_inputs.shape}")
-    test_targets = np.array([18, 16])
-    if test_targets.ndim == 1:
-        test_targets = test_targets.reshape(-1, 1)
-    print(f"Test Targets shape: {test_targets.shape}\n")
+    test_targets = [18, 16]
+    # print(f"Test Targets shape: {test_targets.shape}\n")
 
-    preds = model.predict(test_inputs)
-    print(f"test input: {test_inputs}")
-    print(f"expected prediction: {test_targets}")
-    print(f"prediction results: {preds}" )
+    preds, probs = model.predict(test_inputs, debug_mode=False)
+    print(f"test input: \n{test_inputs}")
+    print(f"expected prediction: \n{test_targets}")
+    print(f"\nprediction results: \n{preds}")
     # print('\nIf the results of predicting the unseen inputs are good,')
     # print('maybe we should save the current weights of the Network.')
 
 
 if __name__ == '__main__':
     DEBUG = False
-    # perceptron_test_input_one_feature_type_a()
-    # perceptron_test_input_one_feature_type_b()
-    perceptron_test_input_two_features()
+    # perceptron_test_input_one_feature_type_a()  # ok
+    perceptron_test_input_one_feature_type_b()
+    # perceptron_test_input_two_features()  # OK
 
 
 
