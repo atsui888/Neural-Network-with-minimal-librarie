@@ -110,6 +110,8 @@ class Model:
 
                     if epoch % print_threshold == 0 or epoch == epochs-1:
                         print(f"epoch #{epoch+1}: \tW.shape: {layer.get_weights_matrix().shape},\tB.shape: {layer.get_bias_matrix().shape}, \tCost: {cost:,.02f}")
+                        # print(f"Layer Weights:  \n{layer.get_weights_matrix()}")
+                        # print(f"Layer Bias:  \n{layer.get_bias_matrix()}\n")
 
                     # get_model_error() already done above
                     # Get Weight_Derivatives
@@ -120,7 +122,7 @@ class Model:
                     # updates its own weights. Similar concept for bias.
                     self.calc_weight_bias_deltas(
                         self._layers[idx-1].get_layer_output(),
-                        self._layers[idx].get_layer_output_bias()
+                        self._layers[idx-1].get_layer_output_bias()  # todo: prev it was [idx], but idx-1 seems correct
                     )
 
                     # todo: for perceptron this works, but what if there is >=1 hidden layer?
@@ -179,14 +181,24 @@ class Model:
 
         # shd be element multiply, not do product
         # https://numpy.org/doc/stable/reference/generated/numpy.multiply.html
+        # print(f"self._weight_deltas : \n{self._weight_deltas}")
+        # print(f"self._bias_deltas : \n{self._bias_deltas}")
+
         self._weight_deltas = np.sum(
             np.multiply(self._error_derivatives, layer_matrix),
             axis=0) / layer_matrix.shape[0]
         self._bias_deltas = np.sum(
-            np.multiply(self._error_derivatives, bias_matrix),
+            np.multiply(self._error_derivatives, bias_matrix),  # bias_matrix
             axis=0) / bias_matrix.shape[0]
 
-        # print(f"self._weight_deltas: \n{self._weight_deltas}")
+        if self._weight_deltas.ndim == 1:
+            self._weight_deltas = self._weight_deltas.reshape(-1, 1)
+        if self._bias_deltas.ndim == 1:
+            self._bias_deltas = self._bias_deltas.reshape(-1, 1)
+        # print(f"self._weight_deltas.shape --->: \n{self._weight_deltas.shape}")
+        # print(f"self._weight_deltas --->: \n{self._weight_deltas}")
+        # print(f"self._bias_deltas.shape --->: \n{self._bias_deltas.shape}")
+        # print(f"self._bias_deltas --->: \n{self._bias_deltas}")
 
     def save(self, file_name='my_nn_module.pkl'):
         """

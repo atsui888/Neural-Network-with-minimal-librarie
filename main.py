@@ -126,10 +126,10 @@ def perceptron_test_input_two_features():
     ]
 
     model = Model(layers)
-    epochs, cost = model.train(train_targets, epochs=4000,
-                               learning_rate=0.15,  # 0.1 - 19,351
+    epochs, cost = model.train(train_targets, epochs=2800,
+                               learning_rate=0.2,  # 0.1 - 19,351
                                cost_fn='Mean Squared Error',
-                               print_threshold=10000, debug_mode=DEBUG)
+                               print_threshold=1000, debug_mode=DEBUG)
     # line_plot(epochs, cost)
 
     model.save()
@@ -138,9 +138,8 @@ def perceptron_test_input_two_features():
     file_name = 'my_nn_module.pkl'
     with open(file_name, 'rb') as handle:
         model = pickle.load(handle)
-    # if it works, we should get prediction results: [ 299.87  701.14 1693.14  786.02 1407.52]
 
-    model.print_model_architecture()
+    # model.print_model_architecture()
 
     # for inferencing
     print("\n", "*"*50)
@@ -156,7 +155,7 @@ def perceptron_test_input_two_features():
     preds, probs = model.predict(test_inputs_n, debug_mode=False)
 
     print(f"expected prediction: \n{test_targets}")
-    print(f"\nprediction results: \n{preds[:,0]}")
+    print(f"prediction results: \n{preds[:,0]}")
 
 
 if __name__ == '__main__':

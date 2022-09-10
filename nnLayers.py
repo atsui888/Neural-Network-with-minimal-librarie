@@ -84,8 +84,8 @@ class InputLayer(Layer):
         if self._layer_output.ndim == 1:
             self._layer_output = self._layer_output.reshape(-1, 1)
 
-        # init bias output matrix to 0, origin
-        self._layer_output_bias = np.zeros(self._data.shape[0] * 1).reshape(-1, 1)
+        # init bias output matrix to 1, unity
+        self._layer_output_bias = np.ones(self._data.shape[0] * 1).reshape(-1, 1)
 
         if self._debug_mode:
             print('\nInput Layer <-- set_data(self, data):')
@@ -117,10 +117,14 @@ class FullyConnectedLayer(Layer):
 
         # Init Weights
         # ************
-        # todo: comment out the next line when testing is over
+        #  method 1: fixed weights
         # self._layer_weights = np.full(self._nodes_prev_layer * self._nodes, fill_value=0.1)
-        # todo: use randomised weights (below) after testing is done (comment out above line)
-        self._layer_weights = np.random.rand(self._nodes_prev_layer * self._nodes)
+        # method 2: random from uniform distribution
+        # self._layer_weights = np.random.rand(self._nodes_prev_layer * self._nodes)
+        # method 3: random from normal distribution
+        # try this, if doesn't work, use the above
+        rng = np.random.default_rng(12345678)
+        self._layer_weights = rng.random((self._nodes_prev_layer * self._nodes))
 
         self._layer_weights = self._layer_weights.reshape(self._nodes_prev_layer, self._nodes)
         if self._layer_weights.ndim == 1:
@@ -133,7 +137,8 @@ class FullyConnectedLayer(Layer):
             print(f"Layer Name: {self.layer_name}")
             print(f"weights.shape:\t\t{self._layer_weights.shape}")
             print(f"bias.shape:\t\t{self._layer_bias.shape}")
-            print(f"layer_output.shape:\t{self._layer_output.shape}")
+            if self._layer_output is not None:
+                print(f"layer_output.shape:\t{self._layer_output.shape}")
 
     def get_layer_details(self):
         layer_details = super().get_layer_details()
@@ -231,7 +236,8 @@ class OutputRegression(FullyConnectedLayer):
             print('\nOutput Regression Layer <-- __init__ :')
             print(f"self._weights.shape: {self._layer_weights.shape}")
             print(f"self._bias.shape: {self._layer_bias.shape}")
-            print(f"self._layer_output.shape: {self._layer_output.shape:}")
+            if self._layer_output is not None:
+                print(f"self._layer_output.shape: {self._layer_output.shape:}")
 
     def predict(self, rounding=2):
         """
