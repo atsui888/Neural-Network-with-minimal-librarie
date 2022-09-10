@@ -5,5 +5,6 @@ To add:
 - Back propagation for hidden layers (currently only back prop for perceptron)
 - Multiprocessing
 - Test against MNIST
-- load/save dictionary of (layers, weights, bias, normalisation)
+- Currently entire model can be saved and loaded, but would like to save/load individual components
+  - load/save dictionary of (layers, weights, bias, normalisation)
 - More Activation and Cost functions
