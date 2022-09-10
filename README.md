@@ -3,8 +3,7 @@ My implementation of Neural Network using as few libraries as possible (only num
 
 To add:
 - Back propagation for hidden layers (currently only back prop for perceptron)
-- load/save model
-- load/save weights and bias
 - Multiprocessing
 - Test against MNIST
+- load/save dictionary of (layers, weights, bias, normalisation)
 - More Activation and Cost functions
