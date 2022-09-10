@@ -23,7 +23,7 @@ from nnData_Helper import DataHelper as dh
 from nnNormalise import Normalise
 from visualise import scatter_plot
 from visualise import line_plot
-
+import pickle
 
 def perceptron_test_input_one_feature():
     """
@@ -132,6 +132,16 @@ def perceptron_test_input_two_features():
                                print_threshold=10000, debug_mode=DEBUG)
     # line_plot(epochs, cost)
 
+    model.save()
+    del model
+
+    file_name = 'my_nn_module.pkl'
+    with open(file_name, 'rb') as handle:
+        model = pickle.load(handle)
+    # if it works, we should get prediction results: [ 299.87  701.14 1693.14  786.02 1407.52]
+
+    model.print_model_architecture()
+
     # for inferencing
     print("\n", "*"*50)
     print("Inferencing:")
@@ -139,7 +149,7 @@ def perceptron_test_input_two_features():
     test_inputs_n = normalise.transform(test_inputs)  # do not .fit(), use the min-max obtained from train set
 
     # print(f"\nTest Inputs shape: {test_inputs.shape}")
-    print(f"\nTest Inputs:\n{test_inputs_n}")
+    # print(f"\nTest Inputs:\n{test_inputs_n}")
 
     test_targets = np.array([500, 850, 1650, 950, 1375]).reshape(-1, 1)
 
@@ -147,7 +157,6 @@ def perceptron_test_input_two_features():
 
     print(f"expected prediction: \n{test_targets}")
     print(f"\nprediction results: \n{preds[:,0]}")
-
 
 
 if __name__ == '__main__':

@@ -48,7 +48,7 @@ class Layer:
         print(f"num_nodes_prev: {layer_details['num_nodes_prev']}")
         print(f"num_nodes: \t\t{layer_details['num_nodes']}")
         layer_output_shape = layer_details.get('layer_output_shape', 'No data, check your layer construction.')
-        print(f"layer_output_shape: \t{layer_output__shape}")
+        print(f"layer_output_shape: \t{layer_output_shape}")
 
     # def forward(self, X=None):
     #     # stub fn, implementation is to be overriden in derived classes if required.

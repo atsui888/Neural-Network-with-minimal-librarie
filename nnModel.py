@@ -1,5 +1,5 @@
 import numpy as np
-# from nnData_Helper import DataHelper
+import pickle
 
 
 class Model:
@@ -25,8 +25,9 @@ class Model:
 
     """
 
-    def __init__(self, layers):
-        self._layers = layers  # a list of layer objects
+    def __init__(self, layers=None):
+        if layers is not None:
+            self._layers = layers  # a list of layer objects
         self._preds = None
         self._probs = None
         self._errors = None
@@ -186,6 +187,16 @@ class Model:
             axis=0) / bias_matrix.shape[0]
 
         # print(f"self._weight_deltas: \n{self._weight_deltas}")
+
+    def save(self, file_name='my_nn_module.pkl'):
+        """
+        save entire model
+        :param file_name:
+        :return:
+        """
+        with open(file_name, 'wb') as handle:
+            pickle.dump(self, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print('model saved')
 
     def save_model_architecture(self):
         pass
