@@ -133,68 +133,16 @@ class Model:
                 self._probs = layer.get_layer_output()
         return epoch_lst, cost_lst
 
-    def predict(self, input_data, threshold=0.5, debug_mode=False):
-        """
-        THIS FUNCTION IS USED FOR "INFERENCING", not for training
-        only accepts a row vector or a list of row vectors as input where
-        each row is a data sample of n number of features where n>=1
-        and data is a numpy array.
-
-        :param input_data:
-        :param threshold:
-        :param debug_mode:
-        :return:
-        """
-
-        # input data
-        if input_data.ndim == 1:
-            input_data = input_data.reshape(-1, 1)
-
-        # load model network, weights and bias
-
-        # predict
-        for idx, layer in enumerate(self._layers):
-            layer_details = layer.get_layer_details()
-            if layer.layer_type.lower() == 'input layer':
-                layer.set_data_and_bias(input_data)
-                continue
-            else:
-                layer.forward(self._layers[idx - 1].get_layer_output(),
-                              self._layers[idx - 1].get_layer_output_bias(),
-                              debug_mode=debug_mode)
-
-            # PREDICT
-            if layer_details['name'].lower() == 'output':
-                if layer.layer_type.lower() == 'output_regression':
-                    self._preds = layer.predict()
-                else:
-                    self._preds = layer.predict(threshold=threshold)
-
-            self._probs = layer.get_layer_output()
-        return self._preds, self._probs
-
-    def get_proba(self):
-        return self._probs
-
     def get_model_error(self, targets):
         # model's difference between predictions and targets
+        if targets.ndim == 1:
+            targets = targets.reshape(-1, 1)
 
-        # code below expects targets to be a list of lists
-        # or tuple of lists (this one need to check)
-        # targets = DataHelper.list_to_listoflists(targets)
-
-        # if DataHelper.is_list_of_lists(targets):
-        # print('list of lists targets ok')
         self._len_targets = len(targets)
-        # errors = preds - targets
-        # preds = weights * input
-        # so, errors = (weights * input) - targets #
-        # targets and inputs are given, we can only adjust the weights to reduce the error
+
         if self._preds is None:
             raise ValueError('Preds cannot be None.')
 
-        # print(f"self._preds shape: {self._preds.shape}")
-        # print(f"targets shape: {targets.shape}")
         self._errors = self._preds - targets  # a matrix
 
         return self._errors
@@ -250,3 +198,46 @@ class Model:
 
     def load_trained_model(self):
         pass
+
+    def predict(self, input_data, threshold=0.5, debug_mode=False):
+        """
+        THIS FUNCTION IS USED FOR "INFERENCING", not for training
+        only accepts a row vector or a list of row vectors as input where
+        each row is a data sample of n number of features where n>=1
+        and data is a numpy array.
+
+        :param input_data:
+        :param threshold:
+        :param debug_mode:
+        :return:
+        """
+
+        # input data
+        if input_data.ndim == 1:
+            input_data = input_data.reshape(-1, 1)
+
+        # load model network, weights and bias
+
+        # predict
+        for idx, layer in enumerate(self._layers):
+            layer_details = layer.get_layer_details()
+            if layer.layer_type.lower() == 'input layer':
+                layer.set_data_and_bias(input_data)
+                continue
+            else:
+                layer.forward(self._layers[idx - 1].get_layer_output(),
+                              self._layers[idx - 1].get_layer_output_bias(),
+                              debug_mode=debug_mode)
+
+            # PREDICT
+            if layer_details['name'].lower() == 'output':
+                if layer.layer_type.lower() == 'output_regression':
+                    self._preds = layer.predict()
+                else:
+                    self._preds = layer.predict(threshold=threshold)
+
+            self._probs = layer.get_layer_output()
+        return self._preds, self._probs
+
+    def get_proba(self):
+        return self._probs

@@ -22,10 +22,7 @@ class Layer:
         self._layer_weights = None  # declared here but initialised in derived classes
         self._layer_output = None  # declared here but value is stored here by methods in derived classes
 
-        # it is ALWAYS (1 by 1) coz there is ONLY 1 bias node in each relevant layer
-        self._layer_bias = np.full(1 * 1, fill_value=0.1).reshape(-1, 1)
-        # todo: comment out above line after testing and uncomment below line, convention is init to 0
-        # self._layer_bias = np.full(1 * 1, fill_value=0.0).reshape(-1, 1)
+        self._layer_bias = np.random.rand(1 * 1).reshape(-1, 1)  # these are bias "weights"
 
         self._layer_output_bias = None  # declared here but value is stored here by methods in derived classes
 
@@ -77,6 +74,7 @@ class InputLayer(Layer):
     def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, train_data, debug_mode=False):
         super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, debug_mode)
         self._data = None
+
         self.set_data_and_bias(train_data)
 
     def set_data_and_bias(self, data):
@@ -86,8 +84,8 @@ class InputLayer(Layer):
         if self._layer_output.ndim == 1:
             self._layer_output = self._layer_output.reshape(-1, 1)
 
-        # init bias output matrix to 1, unity
-        self._layer_output_bias = np.ones(self._data.shape[0] * 1).reshape(-1, 1)
+        # init bias output matrix to 0, origin
+        self._layer_output_bias = np.zeros(self._data.shape[0] * 1).reshape(-1, 1)
 
         if self._debug_mode:
             print('\nInput Layer <-- set_data(self, data):')
@@ -120,25 +118,15 @@ class FullyConnectedLayer(Layer):
         # Init Weights
         # ************
         # todo: comment out the next line when testing is over
-        self._layer_weights = np.full(self._nodes_prev_layer * self._nodes, fill_value=0.1)
+        # self._layer_weights = np.full(self._nodes_prev_layer * self._nodes, fill_value=0.1)
         # todo: use randomised weights (below) after testing is done (comment out above line)
-        # self._layer_weights = np.random.rand(self._nodes_prev_layer * self._nodes)
+        self._layer_weights = np.random.rand(self._nodes_prev_layer * self._nodes)
 
         self._layer_weights = self._layer_weights.reshape(self._nodes_prev_layer, self._nodes)
         if self._layer_weights.ndim == 1:
             self._layer_weights = self._layer_weights.reshape(-1, 1)
 
-        # Init Bias
-        # ************
-        # bias weights already inited by base class layer, nothing to do here
-
-        # Init layer_output
-        # RC: base class _layer_output is declared as None. So this var exists.
-        #     if values of this var is assigned by W.x (where m by n . n by p = m by p
-        #     then there is no need to init _layer_output here.
-
         # Assign activation function
-        # ************
         self.act_fn = act_fn
 
         if debug_mode:
@@ -172,13 +160,16 @@ class FullyConnectedLayer(Layer):
         if weight_deltas.ndim == 1:
             weight_deltas = weight_deltas.reshape(-1, 1)
 
+        if bias_deltas.ndim == 1:
+            bias_deltas = bias_deltas.reshape(-1, 1)
+
         # print(f"self._weights_matrix.shape: {self._weights_matrix.shape}")
         # print(f"weight_deltas.shape: {weight_deltas.shape}")
 
         self._layer_weights -= learning_rate * weight_deltas
         self._layer_bias -= learning_rate * bias_deltas
 
-    def forward(self, prev_layer_x, prev_layer_bias, debug_mode):
+    def forward(self, prev_layer_output, prev_layer_output_bias, debug_mode):
         """
         _layer_matrix of this layer = dot pdt of the matrix of the prev layer (input) and the weights of this layer,
                                      after passing the result of the dot product through an activation function.
@@ -188,31 +179,33 @@ class FullyConnectedLayer(Layer):
         :param debug_mode: bias from previous layer
         :return:
         """
-        if prev_layer_x.ndim == 1:
-            x = prev_layer_x.reshape(-1, 1)
+        if prev_layer_output.ndim == 1:
+            x = prev_layer_output.reshape(-1, 1)
 
         if debug_mode:
             print(f'\nIn .forward() of layer: {self.layer_name} :')
             print('BEFORE forward is executed')
-            print(f'Prev layer_output_bias.shape:\t{prev_layer_bias.shape}')
+            print(f'Prev layer_output_bias.shape:\t{prev_layer_output_bias.shape}')
             print(f'This layer_bias.shape:\t{self._layer_bias.shape}')
-            print(f'Prev layer_output.shape:\t{prev_layer_x.shape}')
+            print(f'Prev layer_output.shape:\t{prev_layer_output.shape}')
             print(f'This layer_weights.shape:\t{self._layer_weights.shape}')
 
         # act(W.X + b), in my implementation I am using act(X.W + b)
-        self._layer_output_bias = np.dot(prev_layer_bias, self._layer_bias)
-        self._layer_output = self.act_fn.execute(np.dot(prev_layer_x, self._layer_weights) + self._layer_output_bias)
+        self._layer_output_bias = np.dot(prev_layer_output_bias, self._layer_bias)
+        self._layer_output = self.act_fn.execute(
+            (np.dot(prev_layer_output, self._layer_weights) + self._layer_output_bias)
+        )
 
         if debug_mode:
             print(f'\nIn .forward() of layer: {self.layer_name} :')
             print('AFTER forward is executed')
-            print(f'Prev layer_output_bias.shape:\t{prev_layer_bias.shape}')
+            print(f'Prev layer_output_bias.shape:\t{prev_layer_output_bias.shape}')
             print(f'This layer_bias.shape:\t\t\t{self._layer_bias.shape}')
             if self._layer_output_bias is None:
                 print('This layer_OUTPUT_bias.shape:\tNone')
             else:
                 print(f'This layer_OUTPUT_bias.shape:\t{self._layer_output_bias.shape}')
-            print(f'Prev layer_output.shape:\t{prev_layer_x.shape}')
+            print(f'Prev layer_output.shape:\t{prev_layer_output.shape}')
             print(f'This layer_weights.shape:\t{self._layer_weights.shape}')
             if self._layer_output is None:
                 print('This layer_OUTPUT.shape:\tNone')
@@ -240,7 +233,7 @@ class OutputRegression(FullyConnectedLayer):
             print(f"self._bias.shape: {self._layer_bias.shape}")
             print(f"self._layer_output.shape: {self._layer_output.shape:}")
 
-    def predict(self):
+    def predict(self, rounding=2):
         """
         regression prediction is linear_activation(wx + b), and this is ALREADY done in the forward
         pass.
@@ -248,7 +241,7 @@ class OutputRegression(FullyConnectedLayer):
         the result of the forward pass.
         :return:
         """
-        return self._layer_output
+        return np.round(self._layer_output, rounding)
 
 
 class OutputBinaryClassification(FullyConnectedLayer):
