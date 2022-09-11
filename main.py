@@ -17,7 +17,9 @@ https://machinelearningmastery.com/learning-rate-for-deep-learning-neural-networ
 import numpy as np
 from nnLayers import InputLayer
 from nnLayers import OutputRegression
+from nnLayers import OutputBinaryClassification
 from nnActivations import Linear
+from nnActivations import Sigmoid
 from nnModel import Model
 from nnData_Helper import DataHelper as dh
 from nnNormalise import Normalise
@@ -25,7 +27,8 @@ from visualise import scatter_plot
 from visualise import line_plot
 import pickle
 
-def perceptron_test_input_one_feature():
+
+def regression_perceptron_input_one_feature():
     """
     inputs are very small compared to targets e.g. 0.2 --> 230, 2.0 --> 1140
     target = W.x
@@ -66,17 +69,17 @@ def perceptron_test_input_one_feature():
     ]
 
     model = Model(layers)
-    epochs, cost = model.train(train_targets, epochs=25,
-                               learning_rate=0.02,
+    epochs, cost = model.train(train_targets, epochs=600,
+                               learning_rate=0.005,
                                cost_fn='Mean Squared Error',
-                               print_threshold=100, debug_mode=DEBUG)
+                               print_threshold=20, debug_mode=DEBUG)
     # line_plot(epochs, cost)
 
     # for inferencing
     # test_inputs = np.array([1.4, 2.7, 5.0])
     # test_targets = [815, 1200, 1790]
 
-    test_inputs = np.array([4.0]).reshape(-1, 1)
+    test_inputs = np.array([4.0]).reshape(-1, 1)  # test input 4, expected results: estd 1,600, beware over-fitting
     preds, probs = model.predict(test_inputs, debug_mode=False)
     print(f"test input: {test_inputs}")
     # print(f"expected prediction: {test_targets}")
@@ -85,7 +88,7 @@ def perceptron_test_input_one_feature():
     print('maybe we should save the current weights of the Network.')
 
 
-def perceptron_test_input_two_features():
+def regression_perceptron_input_two_features():
     # train_inputs = [(1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6)]  # 2 features, 6 data samples
     # train_targets = [12, 14, 16, 18, 20, 22]
 
@@ -145,7 +148,7 @@ def perceptron_test_input_two_features():
     print("\n", "*"*50)
     print("Inferencing:")
     test_inputs = np.array([(1, 10000), (3, 20000), (4, 50000), (5, 20000), (1, 45000)])
-    test_inputs_n = normalise.transform(test_inputs)  # do not .fit(), use the min-max obtained from train set
+    test_inputs_n = normalise.transform(test_inputs)  # do not .fit(), use the min-max already fitted from train set
 
     # print(f"\nTest Inputs shape: {test_inputs.shape}")
     # print(f"\nTest Inputs:\n{test_inputs_n}")
@@ -158,10 +161,97 @@ def perceptron_test_input_two_features():
     print(f"prediction results: \n{preds[:,0]}")
 
 
+def classification_perceptron_input_two_features():
+    """
+    For classification, training data needs to be categorised, output  layer activation function
+    needs to be appropriate, e.g. using sigmoid instead of linear.
+    Cost function needs to be appropriate, MSE not suitable.
+    Test data needs to be categorised e.g. 0 or 1 (if binary classification) and not $1800, $19nn
+
+    :return:
+    """
+    # ------------------ TRAIN DATA start  --------------------------------
+    train_inputs = [(0.2, 1600), (1.0, 11000), (1.4, 23000), (1.6, 24000), (2.0, 30000),
+                    (2.2, 31000), (2.7, 35000), (2.8, 38000), (3.2, 40000), (3.3, 21000), (3.5, 45000),
+                    (3.7, 46000), (4.0, 50000), (4.4, 49000), (5.0, 60000), (5.2, 62000)]
+    train_inputs = np.array(train_inputs)
+    if train_inputs.ndim == 1:
+        train_inputs = train_inputs.reshape(-1, 1)
+
+    normalise = Normalise(train_inputs)
+    normalise.fit().transform()
+    train_inputs_n = normalise.get_normalised_matrix()
+
+    train_targets = np.array([230, 555, 815, 860, 1140, 1085, 1200, 1330, 1290, 870, 1545,
+                              1480, 1750, 1845, 1790, 1955])
+    # convert train targets to two categories
+    # 0 = keep, 1 = sell
+    train_targets = np.where(train_targets < 1600, 0, 1).reshape(-1, 1)
+    # ------------------ train data end  --------------------------------
+
+    # ------------------ DEFINE and INSTANTIATE NETWORK MODEL start  ----
+    layers = [
+        InputLayer('Input', 0, 2, train_inputs_n, debug_mode=DEBUG),
+        OutputBinaryClassification('Output', 2, 1, Sigmoid(), debug_mode=DEBUG)
+    ]
+
+    model = Model(layers)
+    # ------------------ define and instantiate network model end  ----
+
+    # ------------------ TRAIN NETWORK start  -------------------------
+    # MSE + epochs 20 + LR 0.1 gives correct result
+    # Log Loss + epochs 20 + LR 0.1 gives correct result
+    # notes: cost can go down overall yet prediction can be wrong, because the curve fit is usually not exact.
+    # cost is an average, i.e. on average we will get better predictions when cost is going towards 0.
+    epochs, cost = model.train(train_targets, epochs=20,
+                               learning_rate=0.1,
+                               cost_fn='Log Loss',  # 'Log Loss'
+                               print_threshold=5, debug_mode=DEBUG)
+    line_plot(epochs, cost)
+    # ------------------ train network end    -------------------------
+
+    # ------------------ SAVE AND LOAD NETWORK start  -------------------------
+    # model.save()
+    # del model
+    #
+    # file_name = 'my_nn_module.pkl'
+    # with open(file_name, 'rb') as handle:
+    #     model = pickle.load(handle)
+    # model.print_model_architecture()
+    # ------------------ save and load network start  -------------------------
+
+    # ------------------ TEST DATA start  --------------------------------
+    print("\n", "*" * 50)
+    print("Inferencing:")
+    # test inputs
+    test_inputs = np.array([(1, 10000), (3, 20000), (4, 50000), (5, 20000), (1, 45000)])
+    test_inputs_n = normalise.transform(test_inputs)  # do not .fit(), use the min-max already fitted from train set
+
+    # convert test targets to two categories
+    # 0 = keep, 1 = sell
+    test_targets = np.array([500, 850, 1650, 950, 1375])
+    test_targets = np.where(test_targets < 1600, 0, 1)
+
+    # ------------------ test data end  --------------------------------
+
+    # ------------------ PREDICT start  --------------------------------
+    preds, probs = model.predict(test_inputs_n, debug_mode=False)
+
+    print(f"expected prediction: \n{test_targets}")
+    print(f"prediction results: \n{preds[:,0]}")
+    prob_lst = [round(p, 2) for p in probs[:, 0]]
+    print(f"prediction proba: \n{prob_lst}")
+    # ------------------ predict end   --------------------------------
+
+
 if __name__ == '__main__':
     DEBUG = False
-    # perceptron_test_input_one_feature()
-    perceptron_test_input_two_features()
 
+    # regression
+    # regression_perceptron_input_one_feature()
+    # regression_perceptron_input_two_features()
+
+    # classification
+    classification_perceptron_input_two_features()
 
 

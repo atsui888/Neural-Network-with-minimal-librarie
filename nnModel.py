@@ -31,7 +31,9 @@ class Model:
         self._preds = None
         self._probs = None
         self._errors = None
+        self._targets = None
         self._len_targets = None
+        self._cost_fn = None
         self._cost = None
         self._error_derivatives = None
         self._weight_deltas = None
@@ -77,7 +79,16 @@ class Model:
             calc cost
             back prop (update weights)
 
+            Cost:
+            Although cost is not directly used in calculating error derivaties and weight deltas, it is important
+            because it is a SCORE or KPI of how well the network is minimising loss.
+            A human uses it to decide how much to tweak hyper parameters such as learning rate, epochs etc.
+            An automated method can also be used for tweaking, again using cost (lower the better) as the score to
+            improve on. Hence, how the cost is calculated can have an impact on how a human or algorithm decides
+            how to tweak the hyper parameters or to decide to stop the training loop.
+
         """
+        self._cost_fn = cost_fn
         epoch_lst = []
         cost_lst = []
 
@@ -89,27 +100,30 @@ class Model:
                     # print(f"Input Layer shape --> {layer.get_layer_matrix().shape}")
                     continue
                 else:
+                    # forward does this: act(x.w + b)
                     layer.forward(self._layers[idx - 1].get_layer_output(),
                                   self._layers[idx - 1].get_layer_output_bias(),
                                   debug_mode=debug_mode)
 
+                    self._probs = layer.get_layer_output()
+
                 # PREDICT
                 if layer_details['name'].lower() == 'output':
                     if layer.layer_type.lower() == 'output_regression':
-                        # need to pass the prev layer matrix
                         self._preds = layer.predict()
                     else:
                         self._preds = layer.predict(threshold=threshold)
 
                     _ = self.get_model_error(targets)
 
-                    cost = self.get_model_cost(cost_fn=cost_fn)
+                    cost = self.get_model_cost(cost_fn=self._cost_fn)
 
                     epoch_lst.append(epoch)
                     cost_lst.append(cost)
 
                     if epoch % print_threshold == 0 or epoch == epochs-1:
-                        print(f"epoch #{epoch+1}: \tW.shape: {layer.get_weights_matrix().shape},\tB.shape: {layer.get_bias_matrix().shape}, \tCost: {cost:,.02f}")
+                        print(f"epoch #{epoch+1}: \tW.shape: {layer.get_weights_matrix().shape},"
+                              f"\tB.shape: {layer.get_bias_matrix().shape}, \tCost: {cost:,.02f}")
                         # print(f"Layer Weights:  \n{layer.get_weights_matrix()}")
                         # print(f"Layer Bias:  \n{layer.get_bias_matrix()}\n")
 
@@ -133,20 +147,22 @@ class Model:
                     # the start of the network by adjusting the weights
                     layer.update_weights_bias(learning_rate, self._weight_deltas, self._bias_deltas)
 
-                self._probs = layer.get_layer_output()
         return epoch_lst, cost_lst
 
     def get_model_error(self, targets):
         # model's difference between predictions and targets
-        if targets.ndim == 1:
-            targets = targets.reshape(-1, 1)
 
-        self._len_targets = len(targets)
+        self._targets = targets
+
+        if self._targets.ndim == 1:
+            self._targets = self._targets.reshape(-1, 1)
+
+        self._len_targets = len(self._targets)
 
         if self._preds is None:
             raise ValueError('Preds cannot be None.')
 
-        self._errors = self._preds - targets  # a matrix
+        self._errors = self._preds - self._targets  # a matrix
 
         return self._errors
 
@@ -166,6 +182,25 @@ class Model:
             self._cost = np.sum(np.square(self._errors)) / self._len_targets
         elif cost_fn == 'Mean Absolute Error':
             self._cost = np.sum(np.abs(self._errors)) / self._len_targets
+        elif cost_fn == 'Log Loss':
+            # log loss ranges from 0 to inf where 0 is where loss in minimised
+            if self._targets is None:
+                raise ValueError('.get_model_error(targets) must be executed first.')
+            # print(self._targets.shape)  # 0 or 1
+            # print(self._preds.shape)  # 0 or 1
+            # print(self._preds)
+            # self._cost = -self._targets * np.log(self._preds) - (1-self._targets) * np.log(1-self._preds)
+            # self._probs is the probablities used to calculate self._preds which are 0 or 1 (if binary classification)
+            self._cost = -(1/self._len_targets) * np.sum(
+                self._targets * np.log(self._probs) +
+                (1 - self._targets) * np.log(1-self._probs)
+            )
+
+            # print(type(self._cost))
+            # print(self._cost.shape)
+            # print(self._cost)
+            # input('stop')
+
         return self._cost
 
     def calc_weight_bias_deltas(self, layer_matrix, bias_matrix):

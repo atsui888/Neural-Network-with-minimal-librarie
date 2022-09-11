@@ -253,10 +253,10 @@ class OutputRegression(FullyConnectedLayer):
 class OutputBinaryClassification(FullyConnectedLayer):
     layer_type = 'Output_Binary_Classification'
 
-    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn):
-        # hardcode coz binary classification
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode=False):
+        # hardcode coz binary classification only has 1 node (binary, 1 or 0, yes or no, true or false)
         nodes_in_layer = 1
-        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn)
+        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode)
 
         self._predicted_class = None
 
@@ -269,7 +269,9 @@ class OutputBinaryClassification(FullyConnectedLayer):
         # both the below are the same, but the .astype() ver is supposed to be twice as fast
         # but ver B can only produce 0 and 1 while ver A is more flexible
         # self._predicted_class = np.where(self._layer_matrix >= threshold, 1, 0)]  # ver A
+
         self._predicted_class = (self._layer_output > threshold).astype(int)  # ver B
+
         # nb: .round() is the slowest, in some cases 10 times slower
         # ver A and B are faster than list comprehension coz they are vectorized.
         return self._predicted_class
