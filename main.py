@@ -18,8 +18,10 @@ import numpy as np
 from nnLayers import InputLayer
 from nnLayers import OutputRegression
 from nnLayers import OutputBinaryClassification
+from nnLayers import OutputMultiClassClassification
 from nnActivations import Linear
 from nnActivations import Sigmoid
+from nnActivations import Softmax
 from nnModel import Model
 from nnData_Helper import DataHelper as dh
 from nnNormalise import Normalise
@@ -161,7 +163,7 @@ def regression_perceptron_input_two_features():
     print(f"prediction results: \n{preds[:,0]}")
 
 
-def classification_perceptron_input_two_features():
+def classification_perceptron_in_two_features_out_one_node():
     """
     For classification, training data needs to be categorised, output  layer activation function
     needs to be appropriate, e.g. using sigmoid instead of linear.
@@ -199,15 +201,18 @@ def classification_perceptron_input_two_features():
     # ------------------ define and instantiate network model end  ----
 
     # ------------------ TRAIN NETWORK start  -------------------------
-    # MSE + epochs 20 + LR 0.1 gives correct result
-    # Log Loss + epochs 20 + LR 0.1 gives correct result
+    # MSE + epochs 20 + LR 0.1 gives correct result, cost = 0.0, but is 0 also better?
+    # does MSE model the loss better than Log Loss?
+    # Log Loss + epochs 20 + LR 0.1 gives correct result, cost = 0.58
+    # Log Loss + epochs 400 + LR 0.5 gives correct result, cost = 0.53
+    # Log Loss + epochs 120 + LR 0.5 gives correct result, cost = 0.52
     # notes: cost can go down overall yet prediction can be wrong, because the curve fit is usually not exact.
     # cost is an average, i.e. on average we will get better predictions when cost is going towards 0.
-    epochs, cost = model.train(train_targets, epochs=20,
-                               learning_rate=0.1,
-                               cost_fn='Log Loss',  # 'Log Loss'
-                               print_threshold=5, debug_mode=DEBUG)
-    line_plot(epochs, cost)
+    epochs, cost = model.train(train_targets, epochs=800,
+                               learning_rate=0.5,
+                               cost_fn='Log Loss',  # 'Log Loss', 'Mean Squared Error'
+                               print_threshold=100, debug_mode=DEBUG)
+    # line_plot(epochs, cost)
     # ------------------ train network end    -------------------------
 
     # ------------------ SAVE AND LOAD NETWORK start  -------------------------
@@ -244,14 +249,71 @@ def classification_perceptron_input_two_features():
     # ------------------ predict end   --------------------------------
 
 
+def classification_perceptron_in_two_features_out_three_nodes():
+    """
+    multi-class classification. Instead of using 1 node and cutting segments to represent 3 classes,
+    we use 3 nodes - one for each of the 3 classes
+    input features (Length, Width), output classes (Red, Green, Blue)
+    :return:
+    """
+
+    inputs = [(0.0000, 0.0000), (0.2778, 0.2500), (0.2778, 0.9375), (0.9167, 0.6563),
+              (0.4167, 0.2500), (0.3611, 0.3438), (0.3333, 0.4063), (0.9722, 0.3750),
+              (0.0833, 0.3438), (0.6389, 0.3438), (0.4167, 0.6875), (0.7500, 0.6875),
+              (0.0833, 0.1875), (0.9167, 0.5313), (0.1389, 0.2500), (0.8333, 0.6250),
+              (0.8056, 0.6250), (0.1944, 1.0000), (0.8333, 0.5625), (0.4167, 1.0000),
+              (1.0000, 0.6875), (0.4722, 0.6563), (0.3611, 0.5625), (0.4722, 0.8438),
+              (0.1667, 0.3125), (0.4167, 0.9375), (0.3611, 0.9688), (0.9167, 0.3438),
+              (0.0833, 0.0313), (0.3333, 0.8750)]
+    train_inputs = np.array(inputs)
+
+    red = 0
+    green = 1
+    blue = 2
+
+    targets = [red, red, blue, green, red, red, red, green, red, green, blue, green, red,
+               green, red, green, green, blue, green, blue, green, blue, blue, blue,
+               red, blue, blue, green, red, blue]
+
+    train_targets = np.array(targets).reshape(-1, 1)
+
+    # print(f"train_inputs.shape: {train_inputs.shape}")
+    # print(f"train_targets.shape: {train_targets.shape}")
+
+    layers = [
+        InputLayer('Input', 0, 2, train_inputs, debug_mode=DEBUG),
+        OutputMultiClassClassification('Output', 2, 3, Softmax(), debug_mode=DEBUG)
+    ]
+
+    model = Model(layers)
+
+    epochs, cost = model.train(train_targets, epochs=50,
+                               learning_rate=0.1,
+                               cost_fn='Log Loss',  # 'Log Loss', 'Mean Squared Error'
+                               print_threshold=5, debug_mode=False)
+    # line_plot(epochs, cost)
+
+
+
+
+    # test_inputs = [(0.0278, 0.0313), (0.0556, 0.0625), (0.1111, 0.1563), (0.3611, 0.3750),
+    #                (0.2778, 0.3438), (0.8333, 0.3750), (0.5556, 0.4375), (0.8333, 0.5313),
+    #                (0.8611, 0.6563), (0.8056, 0.5625), (0.4722, 0.6563), (0.3611, 0.5625),
+    #                (0.4722, 0.8438), (0.3611, 0.9688), (0.4167, 0.9375)]
+    # test_inputs = np.array(test_inputs)
+    #
+    # test_targets = [red, red, red, red, red, green, green, green, green, green, blue, blue, blue, blue, blue]
+
+
 if __name__ == '__main__':
     DEBUG = False
 
-    # regression
-    # regression_perceptron_input_one_feature()
+    # -- regression
+    # regression_perceptron_input_one_feature()  # target: 1,600
     # regression_perceptron_input_two_features()
 
-    # classification
-    classification_perceptron_input_two_features()
+    # -- classification
+    # classification_perceptron_in_two_features_out_one_node()
+    classification_perceptron_in_two_features_out_three_nodes()
 
 

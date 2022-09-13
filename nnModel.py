@@ -109,12 +109,16 @@ class Model:
 
                 # PREDICT
                 if layer_details['name'].lower() == 'output':
-                    if layer.layer_type.lower() == 'output_regression':
-                        self._preds = layer.predict()
-                    else:
+                    if layer.layer_type.lower() == 'output_binary_classification':
                         self._preds = layer.predict(threshold=threshold)
+                    else:
+                        self._preds = layer.predict()
 
                     _ = self.get_model_error(targets)
+
+                    # print(f"errors shape: {self._errors.shape}")
+                    # print(f"errors: {self._errors}")
+                    # input('stop')
 
                     cost = self.get_model_cost(cost_fn=self._cost_fn)
 
@@ -157,6 +161,7 @@ class Model:
         if self._targets.ndim == 1:
             self._targets = self._targets.reshape(-1, 1)
 
+        # this is used elsewhere e.g. for calc average, where we need to div by num of rows
         self._len_targets = len(self._targets)
 
         if self._preds is None:
@@ -218,6 +223,9 @@ class Model:
         # https://numpy.org/doc/stable/reference/generated/numpy.multiply.html
         # print(f"self._weight_deltas : \n{self._weight_deltas}")
         # print(f"self._bias_deltas : \n{self._bias_deltas}")
+
+        # print(f"self._error_derivatives.shape: {self._error_derivatives.shape}")
+        # print(f"layer_matrix.shape: {layer_matrix.shape}")
 
         self._weight_deltas = np.sum(
             np.multiply(self._error_derivatives, layer_matrix),
@@ -289,10 +297,10 @@ class Model:
 
             # PREDICT
             if layer_details['name'].lower() == 'output':
-                if layer.layer_type.lower() == 'output_regression':
-                    self._preds = layer.predict()
-                else:
+                if layer.layer_type.lower() == 'Output_Binary_Classification':
                     self._preds = layer.predict(threshold=threshold)
+                else:
+                    self._preds = layer.predict()
 
             self._probs = layer.get_layer_output()
         return self._preds, self._probs

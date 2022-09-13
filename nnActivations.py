@@ -1,6 +1,15 @@
 import numpy as np
 
 
+class Softmax:
+    activation_type = 'Softmax'
+    # https://www.sharpsightlabs.com/blog/numpy-softmax/
+
+    def execute(self, x):
+        sm_distribution = (np.exp(x - np.max(x)) / np.exp(x - np.max(x)).sum())
+        return sm_distribution
+
+
 class Sigmoid:
     activation_type = 'Sigmoid'
 

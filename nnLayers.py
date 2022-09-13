@@ -277,9 +277,41 @@ class OutputBinaryClassification(FullyConnectedLayer):
         return self._predicted_class
 
 
-# not implemented, act fn sh be softmax
-# class Output_MultiClass_Classification(Fully_Connected_Layer): # predict 1 class out of multiple classes
-# class Output_MultiLabel_Classification(Fully_Connected_Layer): # predict p-values of 1 or more classes
-#   an input can belong to >1 class
+class OutputMultiClassClassification(FullyConnectedLayer):
+    layer_type = 'Output_MultiClass_Classification'
+
+    def __init__(self, layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode=False):
+        """
+        MultiClass - can have more than one node in this layer
+        act_fn e.g. Softmax() will be sent to parent class to be initialised to be executed
+        during layer.forward().
+        The difference between `class OutputBinaryClassification(FullyConnectedLayer)` and this class
+        is that in OutputBinaryClassification "nodes_in_layer" is hardcoded to 1.
+        As for Activation Functions, for both classes, it depends on what is passed in as args to be
+        initialised in the base class and executed during layer.forward(), no difference in this area.
+        For .predict(), in `OutputBinaryClassification`, determining whether a data point is in class 1
+        or class 0 depends on whether the treshold (usually 0.5, but can be altered) is breached
+        However, in `OutputMultiClassClassification` + softmax, if there are N nodes (i.e. classes),
+        the Node with the highest p-value after softmax is applied is the predicted class. There is no
+        threshold to breach.
+        :param layer_name:
+        :param nodes_prev_layer:
+        :param nodes_in_layer:
+        :param act_fn:
+        :param debug_mode:
+        """
+
+        super().__init__(layer_name, nodes_prev_layer, nodes_in_layer, act_fn, debug_mode)
+
+        self._predicted_class = None
+
+    def get_probability_matrix(self):
+        return self._layer_output
+
+    def predict(self):
+        return np.argmax(self._layer_output, axis=1).reshape(-1, 1)
+
+
+
 
 
